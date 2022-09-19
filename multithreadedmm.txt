@@ -1,0 +1,286 @@
+#include <pthread.h>
+#include <stdio.h>
+#include <bsd/stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+/* Paramters to heaps function */
+struct threadattr{
+
+        /* subarray of the thread */
+        int *subarr;
+
+        /* size of the subarray */
+        int subarrsize;
+
+        int threadid;
+};
+
+/* custom compare funtion for heapsort */
+int compare (const void* val1, const void* val2){
+        //printf("In the compare function. ");
+        //printf("Param are %d & %d. ", *(int*)val1, *(int*)val2);
+        //printf("The number returning is: %d\n", (*(int*)val1-*(int*)val2));
+        return (*(int*)val1 - *(int*)val2);
+}
+
+/* Thread function. Each thread is doing heapsort on it's own subarry */
+void* heaps(void* parameters){
+        struct threadattr* attr = (struct threadattr*) parameters;
+
+        printf("In thread %d\n", attr->threadid);
+        printf("Unsorted subarray\n");
+        for(int n = 0; n < attr->subarrsize; n++){
+                printf("%d\n", attr->subarr[n]);
+        }
+
+        heapsort(attr->subarr, attr->subarrsize, sizeof(int), compare);
+
+        printf(" Sorted subarray\n");
+                for(int h = 0; h < attr->subarrsize; h++){
+                printf("%d\n", attr->subarr[h]);
+        }
+
+        printf("In the thread fun\n");
+        for(int k =0; k < arrsize; k++){
+                printf("%d\n", arr[k]);
+        }
+}
+
+int main(int argc, char **argv){
+
+        /* Var that holds the file identifier */
+        FILE *file;
+
+        /* Var that holds the filename */
+        char *filename;
+
+        /* Var that holds the number of threads that will be used */
+        int numthreads;
+
+        /* Var that holds the array */
+        int *arr;
+
+        /* Var to hold the size of the array */
+        int arrsize;
+
+        /* Vars that to help in for loops */
+        int i = 0;
+        int j = 0;
+
+        /* Var that helps keep the place of where to get the first element for the subarray from the arr */
+        int placeholder = 0;
+
+        /* Buffer for string tokenizer */
+        char buffer[1024];
+
+        /* String to read file lines */
+        char *c;
+        
+		        /* Delimiters for string tokenizer */
+        char delimit[] = " \n%";
+
+        /* Var that will hold new threads */
+        pthread_t *thread;
+
+        /* Var that will hold the structs/info of the new threads */
+        struct threadattr *structarr;
+
+        /* If two arguments are not given when running then program will not run*/
+        if(argc != 3){
+                printf("Need 2 arguments\n");
+                exit(1);
+        }
+
+        /* Getting the number of threads from cmd line */
+        numthreads = atoi(argv[1]);
+
+        /* Getting the file name from the cmd line */
+        filename = argv[2];
+
+        /* Opeing the file. If unable error will output and program will quit */
+        file = fopen(filename, "r");
+        if(file == NULL){
+                fprintf(stderr, "Couldn't open file\n");
+                exit(1);
+        }
+
+        /* Getting the size of the array */
+        fgets(buffer, sizeof(buffer), file);
+        c = strtok(buffer, delimit);
+        arrsize = atoi(c);
+
+        /* Creating array */
+        arr = malloc(arrsize * sizeof(int));
+
+        /* Reading ints from file into array */
+        for( i = 0; i < arrsize; i++){
+                fgets(buffer,sizeof(buffer), file);
+                                c = strtok(buffer, delimit);
+                arr[i] = atoi(c);
+
+        }
+
+        /* Creating array to hold threads and array to hold thread structs/info */
+        thread = (pthread_t *)malloc(numthreads * sizeof(pthread_t));
+        structarr = malloc(numthreads * sizeof(struct threadattr));
+
+        /* Setting the size for each subarray in the threads*/
+        for(i = 0; i < numthreads; i++){
+                /* If equal amount of elements can fit in each arr, set the size of that num */
+                if(arrsize % numthreads == 0){
+                        /* Getting array size */
+                        structarr[i].subarrsize = arrsize / numthreads;
+
+                        /* Creating array */
+                        structarr[i].subarr = malloc(structarr[i].subarrsize * sizeof(int));
+
+                        /* Setting threadid */
+                        structarr[i].threadid = i;
+
+                        /* Storing elements in the subarrays */
+                        if(i == 0){
+                                memcpy(structarr[i].subarr, arr, structarr[i].subarrsize * sizeof(int));
+                                placeholder = structarr[i].subarrsize;
+
+                                /* Creating threads and doing heapsort */
+                                if(pthread_create(&thread[i], NULL, &heaps, &structarr[i]) != 0){
+                                        fprintf(stderr,"Pthread create failed\n");
+                                        exit(1);
+                                }
+                        }
+                        else{
+                                memcpy(structarr[i].subarr, arr + placeholder, structarr[i].subarrsize * sizeof(int));
+                                placeholder += structarr[i].subarrsize;
+
+                                /* Creating threads and doing heapsort */
+                                if(pthread_create(&thread[i], NULL, &heaps, &structarr[i]) != 0){
+                                                                        if(pthread_create(&thread[i], NULL, &heaps, &structarr[i]) != 0){
+                                        fprintf(stderr,"Pthread create failed\n");
+                                        exit(1);
+                                }
+                        }
+                        else{
+                                memcpy(structarr[i].subarr, arr + placeholder, structarr[i].subarrsize * sizeof(int));
+                                placeholder += structarr[i].subarrsize;
+
+                                /* Creating threads and doing heapsort */
+                                if(pthread_create(&thread[i], NULL, &heaps, &structarr[i]) != 0){
+                                        fprintf(stderr,"Pthread create failed\n");
+                                        exit(1);
+                                }
+                        }
+                }else{
+                        if(i == numthreads-1){
+                                /* The last array will have the extra/remaining elements */
+                                structarr[i].subarrsize = (arrsize / numthreads) + (arrsize%numthreads);
+
+                                /* Creating subarrays */
+                                structarr[i].subarr = malloc(structarr[i].subarrsize * sizeof(int));
+
+                                /* Setting threadid */
+                                structarr[i].threadid = i;
+
+                                /* Storing elements in the subarrays */
+                                if(i == 0){
+                                        memcpy(structarr[i].subarr, arr, structarr[i].subarrsize * sizeof(int));
+                                        placeholder = structarr[i].subarrsize;
+
+                                        /* Creating threads and doing heapsort */
+                                        if(pthread_create(&thread[i], NULL, &heaps, &structarr[i]) != 0){
+                                                fprintf(stderr,"Pthread create failed\n");
+                                                exit(1);
+                                        }
+                                }
+                                else{
+                                        memcpy(structarr[i].subarr, arr + placeholder, structarr[i].subarrsize * sizeof(int));
+                                                                                placeholder += structarr[i].subarrsize;
+
+                                        /* Creating threads and doing heapsort */
+                                        if(pthread_create(&thread[i], NULL, &heaps, &structarr[i]) != 0){
+                                                fprintf(stderr,"Pthread create failed\n");
+                                                exit(1);
+                                        }
+                                }
+                        }else{
+                                /* Give each thread an equal amount of elements except the last one*/
+                                structarr[i].subarrsize = arrsize / numthreads;
+
+                                /* Creating subarrays */
+                                structarr[i].subarr = malloc(structarr[i].subarrsize * sizeof(int));
+
+                                /* Setting threadid */
+                                structarr[i].threadid = i;
+
+                                /* Storing elements in the subarrays */
+                                if(i == 0){
+                                        memcpy(structarr[i].subarr, arr, structarr[i].subarrsize * sizeof(int));
+                                        placeholder = structarr[i].subarrsize;
+
+                                        /* Creating threads and doing heapsort */
+                                        if(pthread_create(&thread[i], NULL, &heaps, &structarr[i]) != 0){
+                                                fprintf(stderr,"Pthread create failed\n");
+                                                exit(1);
+                                        }
+                                }else{
+                                        memcpy(structarr[i].subarr, arr + placeholder, structarr[i].subarrsize * sizeof(int));
+                                        placeholder += structarr[i].subarrsize;
+
+                                        /* Creating threads and doing heapsort */
+                                        if(pthread_create(&thread[i], NULL, &heaps, &structarr[i]) != 0){
+                                                fprintf(stderr,"Pthread create failed\n");
+                                                exit(1);
+                                        }
+                                }
+                        }
+                                    }
+                //printf("The size of the struct arrays are %d\n", structarr[i].subarrsize);
+        }
+
+        //for(i = 0; i < numthreads; i++){
+        //      printf("In the %d thread, the sub array is:\n", i);
+        //      for(j = 0; j < structarr[i].subarrsize; j++){
+        //              printf("%d\n", structarr[i].subarr[j]);
+        //      }
+        //}
+
+        for(i = 0; i < numthreads; i++){
+                for(j = 0; j < structarr[i].subarrsize; j++){
+
+
+
+        for(i = 0; i < numthreads; i++){
+                printf("tring a pthread_join\n");
+                if(pthread_join(thread[i], NULL) != 0){
+                        fprintf(stderr, "pthread_join failed\n");
+                        exit(1);
+                }
+                printf("%d pthread join was completed\n", i);
+        }
+
+        //printf("Usorted array\n");
+        //for(int j = 0; j < arrsize; j++){
+        //      printf("%d\n", arr[j]);
+        //}
+
+        //heapsort(arr, arrsize, sizeof(int), compare);
+
+        //printf("Sorted array\n");
+        //for(int l = 0; l < arrsize; l++){
+        //      printf("%d\n", arr[l]);
+        //}
+
+        printf("The size of the arr will be %d\n", arrsize);
+        printf("The number of threads are %d\n", numthreads);
+        fclose(file);
+
+        /* Clearing allocated memory */
+        for(i = 0; i < numthreads; i++){
+                free(structarr[i].subarr);
+        }
+        free(arr);
+        free(thread);
+        free(structarr);
+
+        return 0;
+}

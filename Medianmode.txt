@@ -1,0 +1,146 @@
+#include <pthread.h>
+#include <stdio.h>
+#include <bsd/stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+/* custom compare funtion for heapsort */
+int compare (const void* val1, const void* val2){
+        printf("In the compare function. ");
+        printf("Param are %d & %d. ", *(int*)val1, *(int*)val2);
+        printf("The number returning is: %d\n", (*(int*)val1-*(int*)val2));
+        return (*(int*)val1 - *(int*)val2);
+}
+
+/* Thread function. Each thread is doing heapsort on it's own subarry */
+//void* heaps(void* parameters){
+
+
+//}
+
+int main(int argc, char **argv){
+
+        /* Var that holds the file identifier */
+        FILE *file;
+
+        /* Var that holds the filename */
+        char *filename;
+
+                /* Var that holds the number of threads that will be used */
+        int numthreads;
+
+        /* Var that holds the array */
+        int *arr;
+
+        /* Var to hold the size of the array */
+        int arrsize;
+
+        /* Var that tells array where to start getting #'s from string */
+        int i = 0;
+
+        /* Buffer for string tokenizer */
+        char buffer[1024];
+
+        /* String to read file lines */
+        char *c;
+
+        /* String to convert array size from string to int with atoi() */
+        char arrsizeval[1];
+
+        /* Delimiters for string tokenizer */
+        char delimit[] = " \n";
+
+        /* String to tell the number will be the array size */
+        char mod[] = "%";
+
+        /* Var that will hold new threads */
+        pthread_t *thread;
+		
+		        /* If two arguments are not given when running then program will not run*/
+        if(argc != 3){
+                printf("Need 2 arguments\n");
+                exit(1);
+        }
+
+        /* Getting the number of threads from cmd line */
+        numthreads = atoi(argv[1]);
+
+        /* Getting the file name from the cmd line */
+        filename = argv[2];
+
+        /* Opeing the file. If unable error will output and program will quit */
+        file = fopen(filename, "r");
+        if(file == NULL){
+                fprintf(stderr, "Couldn't open file\n");
+                exit(1);
+        }
+
+        /* Reading ints from file into array */
+        while(fgets(buffer, sizeof(buffer), file) != NULL){
+                for(c = strtok(buffer, delimit); c != NULL; c = strtok(NULL, delimit)){
+                        /* Getting array size and creating array */
+                        if(strcmp(c, mod) == 0){
+                                arrsizeval[0] = c[2];
+                                arrsize = atoi(arrsizeval);
+                                arr = malloc(arrsize * sizeof(int));
+                        }else if(strcmp(c,mod) != 0 && arrsize != atoi(c)){
+                                arr[i] = atoi(c);
+								                        }
+
+                }
+        }
+
+        /* Creating space for the number of threads to hold */
+        //thread = (pthread_t *)malloc(numthreads*sizeof(pthread_t));
+
+        /* Creating threads */
+        //for(int j = 0; j < numthreads; j++){
+        //      if(pthread_create(&thread[j], NULL,heaps , NULL) != 0){ // Still needs thread funtion
+        //              fprintf(stderr, "Pthread_create failed\n");
+        //              exit(1);
+        //      }
+        //}
+
+        //for(int k = 0; k < numthreads; k++){
+        //      if(pthread_join(thead[j], NULL) != 0){
+        //              fprintf(stderr, "pthread_join failed\n");
+        //              exit(1);
+        //      }
+        //}
+
+        printf("Usorted array\n");
+        for(int j = 0; j < arrsize; j++){
+                printf("%d\n", arr[j]);
+        }
+
+        heapsort(arr, arrsize, sizeof(int), compare);
+		        //for(int k = 0; k < numthreads; k++){
+        //      if(pthread_join(thead[j], NULL) != 0){
+        //              fprintf(stderr, "pthread_join failed\n");
+        //              exit(1);
+        //      }
+        //}
+
+        printf("Usorted array\n");
+        for(int j = 0; j < arrsize; j++){
+                printf("%d\n", arr[j]);
+        }
+
+        heapsort(arr, arrsize, sizeof(int), compare);
+
+        printf("Sorted array\n");
+        for(int l = 0; l < arrsize; l++){
+                printf("%d\n", arr[l]);
+        }
+
+        printf("The size of the arr will be %d\n", arrsize);
+        printf("The number of threads are %d\n", numthreads);
+        fclose(file);
+
+        /* Clearing allocated memory */
+        free(arr);
+        //free(thread);
+
+        return 0;
+}
+                                                                                                                                     133,1         Bot

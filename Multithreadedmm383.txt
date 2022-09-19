@@ -1,0 +1,257 @@
+#include <pthread.h>
+#include <stdio.h>
+#include <bsd/stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+/* Paramters to heaps function */
+struct arrayattr{
+
+        /* inital array of elements */
+        int *arr;
+
+        /* final array that has sorted elements */
+        int *finalarr;
+
+        /* size of the array */
+        int arrsize;
+
+        int numofthreads;
+
+        /* Pointer to struct holding the thread info */
+        struct threadattr *threadinfo;
+};
+
+struct threadattr{
+        /* Place holder to where the thread will begin heapsort */
+        int start;
+
+        /* Var to to tell thread where to stop doing heapsort */
+        int stop;
+
+        /* Var to hold the id of each thread */
+        int threadid;
+
+        int subarrsize;
+};
+
+/* custom compare funtion for heapsort */
+int compare (const void* val1, const void* val2){
+		        //printf("In the compare function. ");
+        //printf("Param are %d & %d. ", *(int*)val1, *(int*)val2);
+        //printf("The number returning is: %d\n", (*(int*)val1-*(int*)val2));
+        return (*(int*)val1 - *(int*)val2);
+}
+
+/* Thread function. Each thread is doing heapsort on it's own subarry */
+void* heaps(void* parameters){
+        struct arrayattr* attr = (struct arrayattr*) parameters;
+
+        //printf("In thread %d for thread fun sub arr size is %d\n" , attr->threadinfo->threadid, attr->threadinfo->subarrsize);
+        //printf("starting point is %d and stoping point is %d\n", attr->startnum, attr->stopnum);
+        //printf("Unsorted subarray\n");
+        //for(int n = 0; n < attr->arrsize; n++){
+        //      printf("%d\n", attr->subarr[n]);
+        //}
+
+        for(int i = 0; i < attr->numofthreads; i++){
+                printf("Thread %d for thread has sub arr size %d\n", i, attr->threadinfo[i].subarrsize);
+                //heapsort(attr->arr[attr->threadinfo[i].start], attr->threadinfo[i].subarrsize, sizeof(int), compare);
+                if(i == attr->threadinfo[i].threadid){
+                        heapsort(attr->arr[attr->threadinfo[i].start], attr->threadinfo[i].subarrsize, sizeof(int), compare);
+                }
+        }
+
+        //printf(" Sorted subarray\n");
+        //for(int h = 0; h < attr->subarrsize; h++){
+        //      printf("%d\n", attr->subarr[h]);
+        //}
+
+        //printf("In the thread fun\n");
+        //for(int k =0; k < arrsize; k++){
+        //      printf("%d\n", arr[k]);
+        //}
+}
+
+int main(int argc, char **argv){
+
+        /* Var that holds the file identifier */
+                /* Var that holds the file identifier */
+        FILE *file;
+
+        /* Var that holds the filename */
+        char *filename;
+
+        /* Var that holds the number of threads that will be used */
+        int numthreads;
+
+        /* Vars that to help in for loops */
+        int i = 0;
+        int j = 0;
+
+        /* Var that helps keep the place of where to get the first element for the subarray from the arr */
+        int startingplace = 0;
+        int stopingplace = 0;
+        int length;
+
+        /* Buffer for string tokenizer */
+        char buffer[1024];
+
+        /* String to read file lines */
+        char *c;
+
+        /* Delimiters for string tokenizer */
+        char delimit[] = " \n%";
+
+        /* Array that will hold new threads */
+        pthread_t *thread;
+
+        /* Array to hold struct of thread info */
+        struct threadattr *threadstruct;
+
+        /* Struct that will hold array  */
+        struct arrayattr arrstruct;
+
+        /* If two arguments are not given when running then program will not run*/
+        if(argc != 3){
+                printf("Need 2 arguments\n");
+                                exit(1);
+        }
+
+        /* Getting the number of threads from cmd line */
+        numthreads = atoi(argv[1]);
+
+        /* Getting the file name from the cmd line */
+        filename = argv[2];
+
+        /* Opeing the file. If unable error will output and program will quit */
+        file = fopen(filename, "r");
+        if(file == NULL){
+                fprintf(stderr, "Couldn't open file\n");
+                exit(1);
+        }
+
+        /* Getting the size of the array */
+        fgets(buffer, sizeof(buffer), file);
+        c = strtok(buffer, delimit);
+        arrstruct.arrsize = atoi(c);
+
+        /* Creating array */
+        arrstruct.arr = malloc(arrstruct.arrsize * sizeof(int));
+
+        /* Reading ints from file into array */
+        for( i = 0; i < arrstruct.arrsize; i++){
+                fgets(buffer,sizeof(buffer), file);
+                c = strtok(buffer, delimit);
+                arrstruct.arr[i] = atoi(c);
+
+        }
+
+        /* Creating array to hold threads and struct array to hold thread info*/
+        thread = (pthread_t *)malloc(numthreads * sizeof(pthread_t));
+        threadstruct = malloc(numthreads * sizeof(struct threadattr));
+
+        /* Getting subarray sizes for the threads */
+        for(i = 0; i < numthreads; i++){
+                /* If equal amount of elements can fit in each array */
+                                if(arrstruct.arrsize % numthreads == 0){
+                        if(i == 0){
+                                threadstruct[i].start = startingplace;
+                                threadstruct[i].stop = arrstruct.arrsize / numthreads - 1;
+                                stopingplace = threadstruct[i].stop;
+                                length = stopingplace;
+                                threadstruct[i].threadid = i;
+                                threadstruct[i].subarrsize = (threadstruct[i].stop - threadstruct[i].start) + 1;
+                        }else{
+                                startingplace = stopingplace + 1;
+                                threadstruct[i].start = startingplace;
+                                threadstruct[i].stop = threadstruct[i].start + length;
+                                stopingplace = threadstruct[i].start + length;
+                                threadstruct[i].threadid = i;
+                                threadstruct[i].subarrsize = (threadstruct[i].stop - threadstruct[i].start) + 1;
+                        }
+                }else{ // Every thread will have equal elements, except the last one which will hold the extra 
+                        //printf("Threads will not have an equal amount\n");
+                        if(i == 0){
+                                //printf("I is zero\n");
+                                threadstruct[i].start = startingplace;
+                                threadstruct[i].stop = arrstruct.arrsize / numthreads - 1;
+                                stopingplace = threadstruct[i].stop;
+                                length = stopingplace;
+                                threadstruct[i].threadid = i;
+                                threadstruct[i].subarrsize = (threadstruct[i].stop - threadstruct[i].start) + 1;
+                        }else if(i == numthreads - 1){
+                                //printf("In the last thread stoping place is %d\n", stopingplace);
+                                startingplace = stopingplace + 1;
+                                threadstruct[i].start = startingplace;
+                                //threadstruct[i].stop = stopingplace + length + (arrstruct.arrsize % numthreads);
+                                threadstruct[i].stop = arrstruct.arrsize - 1;
+                                threadstruct[i].threadid = i;
+                                threadstruct[i].subarrsize = (threadstruct[i].stop - threadstruct[i].start) + 1;
+                        }else{
+                                //printf(" I is %d\n", i);
+                                startingplace = stopingplace + 1;
+                                //printf("starting place for %d is %d\n", i, startingplace);
+                                threadstruct[i].start = startingplace;
+                                                                threadstruct[i].start = startingplace;
+                                threadstruct[i].stop = threadstruct[i].start + length;
+                                stopingplace = threadstruct[i].start + length;
+                                threadstruct[i].threadid = i;
+                                threadstruct[i].subarrsize = (threadstruct[i].stop - threadstruct[i].start) + 1;
+                        }
+                }
+        }
+
+        //for(i = 0; i < numthreads; i++){
+                //printf("The %d thread's subarry is starting at %d and ending at %d\n", i, threadstruct[i].start, threadstruct[i].stop);
+        //}
+
+        /* passing struct that has thread indexs to main struct */
+        arrstruct.threadinfo = threadstruct;
+        arrstruct.numofthreads = numthreads;
+
+        //for(i = 0; i < numthreads; i++){
+                //printf("Thread %d has start %d and stop %d\n", arrstruct.threadinfo[i].threadid, arrstruct.threadinfo[i].start, arrstruct.threadinfo[i].stop);
+        //}
+
+        for(i = 0; i < numthreads; i++){
+                if(pthread_create(&thread[i], NULL, &heaps, &arrstruct) != 0){
+                        fprintf(stderr,"Pthread_create failed\n");
+                        exit(1);
+                }
+        }
+
+        for(i = 0; i < numthreads; i++){
+                //printf("tring a pthread_join\n");
+                if(pthread_join(thread[i], NULL) != 0){
+                        fprintf(stderr, "pthread_join failed\n");
+                        exit(1);
+                }
+                //printf("%d pthread join was completed\n", i);
+        }
+
+        //printf("Usorted array\n");
+        //for(int j = 0; j < arrsize; j++){
+            printf("%d\n", arr[j]);
+        //}
+
+        //heapsort(arr, arrsize, sizeof(int), compare);
+
+        //printf("Sorted array\n");
+        //for(int l = 0; l < arrsize; l++){
+        //      printf("%d\n", arr[l]);
+        //}
+
+        //printf("The size of the arr will be %d\n", arrsize);
+        //printf("The number of threads are %d\n", numthreads);
+        fclose(file);
+
+        /* Clearing allocated memory */
+        free(arrstruct.arr);
+        free(thread);
+        //free(arrstruct.threadinfo);
+        free(threadstruct);
+
+        return 0;
+}
+  
